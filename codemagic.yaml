@@ -11,6 +11,7 @@ workflows:
       ios_signing:
         distribution_type: app_store
         bundle_identifier: ie.courtmacsherry.festival
+        auto_provisioning: true
       vars:
         BUNDLE_ID: "ie.courtmacsherry.festival"
         XCODE_WORKSPACE: "src/Courtmacsherry Harbour Festival 2026.xcworkspace"
