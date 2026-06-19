@@ -23,7 +23,10 @@ workflows:
         script: |
           app-store-connect fetch-signing-files "$BUNDLE_ID" \
             --type IOS_APP_STORE \
-            --create
+            --create \
+            --certificate-key "$(echo $APP_STORE_CONNECT_PRIVATE_KEY)" \
+            --issuer-id "$APP_STORE_CONNECT_ISSUER_ID" \
+            --key-id "$APP_STORE_CONNECT_KEY_IDENTIFIER"
           keychain initialize
           keychain add-certificates
           xcode-project use-profiles
