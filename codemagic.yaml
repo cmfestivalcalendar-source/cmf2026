@@ -31,6 +31,7 @@ workflows:
           cp /tmp/profile.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/$UUID.mobileprovision
       - name: Create export options
         script: |
+          UUID=$(security cms -D -i /tmp/profile.mobileprovision | plutil -extract UUID raw -)
           cat > /tmp/exportOptions.plist << EOF
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -45,7 +46,7 @@ workflows:
             <key>provisioningProfiles</key>
             <dict>
               <key>ie.courtmacsherry.festival</key>
-              <string>CMF2026 Appstore</string>
+              <string>$UUID</string>
             </dict>
           </dict>
           </plist>
@@ -67,8 +68,7 @@ workflows:
             DEVELOPMENT_TEAM=75KLYBLNXP \
             CODE_SIGN_IDENTITY="iPhone Distribution" \
             PROVISIONING_PROFILE=$UUID \
-            PROVISIONING_PROFILE_SPECIFIER="CMF2026 Appstore" \
-            OTHER_CODE_SIGN_FLAGS="--keychain /Users/builder/Library/Keychains/cm-buildagent.keychain" \
+            PROVISIONING_PROFILE_SPECIFIER=$UUID \
             archive
           xcodebuild \
             -exportArchive \
