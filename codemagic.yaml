@@ -6,9 +6,8 @@ workflows:
     integrations:
       app_store_connect: codemagic
     environment:
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: ie.courtmacsherry.festival
+      groups:
+        - ios_credentials
       vars:
         BUNDLE_ID: "ie.courtmacsherry.festival"
         XCODE_WORKSPACE: "src/Courtmacsherry Harbour Festival 2026.xcworkspace"
@@ -21,7 +20,15 @@ workflows:
           cd src
           pod install
       - name: Set up code signing
-        script: xcode-project use-profiles
+        script: |
+          echo $CM_CERTIFICATE | base64 --decode > /tmp/certificate.p12
+          keychain initialize
+          keychain add-certificates --certificate /tmp/certificate.p12 --certificate-password $CM_CERTIFICATE_PASSWORD
+          echo $CM_PROVISIONING_PROFILE | base64 --decode > /tmp/profile.mobileprovision
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          UUID=$(security cms -D -i /tmp/profile.mobileprovision | plutil -extract UUID raw -)
+          cp /tmp/profile.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/$UUID.mobileprovision
+          echo "Profile UUID: $UUID"
       - name: Increment build number
         script: |
           cd src
@@ -29,11 +36,43 @@ workflows:
           agvtool new-version -all $(($LATEST + 1))
       - name: Build IPA
         script: |
-          xcode-project build-ipa \
-            --workspace "$XCODE_WORKSPACE" \
-            --scheme "$XCODE_SCHEME"
+          UUID=$(security cms -D -i /tmp/profile.mobileprovision | plutil -extract UUID raw -)
+          xcodebuild \
+            -workspace "$XCODE_WORKSPACE" \
+            -scheme "$XCODE_SCHEME" \
+            -configuration Release \
+            -archivePath /tmp/CMF2026.xcarchive \
+            CODE_SIGN_STYLE=Manual \
+            DEVELOPMENT_TEAM=75KLYBLNXP \
+            CODE_SIGN_IDENTITY="iPhone Distribution" \
+            PROVISIONING_PROFILE=$UUID \
+            PROVISIONING_PROFILE_SPECIFIER="" \
+            archive
+          xcodebuild \
+            -exportArchive \
+            -archivePath /tmp/CMF2026.xcarchive \
+            -exportPath /tmp/CMF2026.ipa \
+            -exportOptionsPlist /tmp/exportOptions.plist
+      - name: Create export options
+        script: |
+          cat > /tmp/exportOptions.plist << EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>app-store</string>
+            <key>teamID</key>
+            <string>75KLYBLNXP</string>
+            <key>uploadBitcode</key>
+            <false/>
+            <key>uploadSymbols</key>
+            <true/>
+          </dict>
+          </plist>
+          EOF
     artifacts:
-      - build/ios/ipa/*.ipa
+      - /tmp/CMF2026.ipa/**/*.ipa
       - /tmp/xcodebuild_logs/*.log
     publishing:
       app_store_connect:
