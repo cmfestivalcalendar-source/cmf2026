@@ -19,7 +19,7 @@ workflows:
         script: |
           cd src
           pod install
-     - name: Set up code signing
+      - name: Set up code signing
         script: |
           echo $CM_CERTIFICATE | base64 --decode > /tmp/certificate.p12
           keychain initialize
