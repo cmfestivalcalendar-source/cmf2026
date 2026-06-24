@@ -27,8 +27,29 @@ workflows:
           echo $CM_PROVISIONING_PROFILE | base64 --decode > /tmp/profile.mobileprovision
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
           UUID=$(security cms -D -i /tmp/profile.mobileprovision | plutil -extract UUID raw -)
-          cp /tmp/profile.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/$UUID.mobileprovision
           echo "Profile UUID: $UUID"
+          cp /tmp/profile.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/$UUID.mobileprovision
+      - name: Create export options
+        script: |
+          cat > /tmp/exportOptions.plist << EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>app-store</string>
+            <key>teamID</key>
+            <string>75KLYBLNXP</string>
+            <key>signingStyle</key>
+            <string>manual</string>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>ie.courtmacsherry.festival</key>
+              <string>CMF2026 Appstore</string>
+            </dict>
+          </dict>
+          </plist>
+          EOF
       - name: Increment build number
         script: |
           cd src
@@ -46,33 +67,16 @@ workflows:
             DEVELOPMENT_TEAM=75KLYBLNXP \
             CODE_SIGN_IDENTITY="iPhone Distribution" \
             PROVISIONING_PROFILE=$UUID \
-            PROVISIONING_PROFILE_SPECIFIER="" \
+            PROVISIONING_PROFILE_SPECIFIER="CMF2026 Appstore" \
+            OTHER_CODE_SIGN_FLAGS="--keychain /Users/builder/Library/Keychains/cm-buildagent.keychain" \
             archive
           xcodebuild \
             -exportArchive \
             -archivePath /tmp/CMF2026.xcarchive \
-            -exportPath /tmp/CMF2026.ipa \
+            -exportPath /tmp/CMF2026ipa \
             -exportOptionsPlist /tmp/exportOptions.plist
-      - name: Create export options
-        script: |
-          cat > /tmp/exportOptions.plist << EOF
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0">
-          <dict>
-            <key>method</key>
-            <string>app-store</string>
-            <key>teamID</key>
-            <string>75KLYBLNXP</string>
-            <key>uploadBitcode</key>
-            <false/>
-            <key>uploadSymbols</key>
-            <true/>
-          </dict>
-          </plist>
-          EOF
     artifacts:
-      - /tmp/CMF2026.ipa/**/*.ipa
+      - /tmp/CMF2026ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
     publishing:
       app_store_connect:
