@@ -10,8 +10,8 @@ workflows:
         - ios_credentials
       vars:
         BUNDLE_ID: "ie.courtmacsherry.festival"
-        XCODE_WORKSPACE: "src/Courtmacsherry Harbour Festival 2026.xcworkspace"
-        XCODE_SCHEME: "Courtmacsherry Harbour Festival 2026"
+        XCODE_WORKSPACE: "src/CMH Festival.xcworkspace"
+        XCODE_SCHEME: "CMH Festival"
         APP_STORE_APPLE_ID: "6779231918"
       xcode: latest
     scripts:
