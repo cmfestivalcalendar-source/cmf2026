@@ -10,14 +10,14 @@ workflows:
         - ios_credentials
       vars:
         BUNDLE_ID: "ie.courtmacsherry.festival"
-        XCODE_WORKSPACE: "src/CMH Festival.xcworkspace"
+        XCODE_WORKSPACE: "src/src/CMH Festival.xcworkspace"
         XCODE_SCHEME: "CMH Festival"
         APP_STORE_APPLE_ID: "6779231918"
       xcode: latest
     scripts:
       - name: Install CocoaPods
         script: |
-          cd src
+          cd src/src
           pod install
       - name: Set up code signing
         script: |
@@ -57,7 +57,7 @@ workflows:
           EOF
       - name: Increment build number
         script: |
-          cd src
+          cd src/src
           LATEST=$(app-store-connect get-latest-app-store-build-number "$APP_STORE_APPLE_ID" || echo "0")
           agvtool new-version -all $(($LATEST + 1))
       - name: Build IPA
