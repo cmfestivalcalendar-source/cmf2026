@@ -6,10 +6,10 @@ workflows:
     integrations:
       app_store_connect: codemagic
     environment:
-      groups:
-        - ios_credentials
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: ie.courtmacsherry.festival
       vars:
-        BUNDLE_ID: "ie.courtmacsherry.festival"
         XCODE_WORKSPACE: "src/src/CMH Festival.xcworkspace"
         XCODE_SCHEME: "CMH Festival"
         APP_STORE_APPLE_ID: "6779231918"
@@ -19,68 +19,28 @@ workflows:
         script: |
           cd src/src
           pod install
-      - name: Set up code signing
+      - name: Fetch signing files
         script: |
-          echo $CM_CERTIFICATE | base64 --decode > /tmp/certificate.p12
+          app-store-connect fetch-signing-files "ie.courtmacsherry.festival" --type IOS_APP_STORE --create
+      - name: Set up signing certificate
+        script: |
           keychain initialize
-          keychain add-certificates --certificate /tmp/certificate.p12 --certificate-password $CM_CERTIFICATE_PASSWORD
-          echo $CM_PROVISIONING_PROFILE | base64 --decode > /tmp/profile.mobileprovision
-          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-          UUID=$(security cms -D -i /tmp/profile.mobileprovision | plutil -extract UUID raw -)
-          echo "Profile UUID: $UUID"
-          cp /tmp/profile.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/$UUID.mobileprovision
-          echo "Installed profiles:"
-          ls ~/Library/MobileDevice/Provisioning\ Profiles/
-          echo "Certificate check:"
-          security find-identity -v -p codesigning
-      - name: Create export options
+          keychain add-certificates
+      - name: Set up code signing settings on Xcode project
         script: |
-          UUID=$(security cms -D -i /tmp/profile.mobileprovision | plutil -extract UUID raw -)
-          cat > /tmp/exportOptions.plist << EOF
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0">
-          <dict>
-            <key>method</key>
-            <string>app-store</string>
-            <key>teamID</key>
-            <string>75KLYBLNXP</string>
-            <key>signingStyle</key>
-            <string>manual</string>
-            <key>provisioningProfiles</key>
-            <dict>
-              <key>ie.courtmacsherry.festival</key>
-              <string>$UUID</string>
-            </dict>
-          </dict>
-          </plist>
-          EOF
+          xcode-project use-profiles
       - name: Increment build number
         script: |
           cd src/src
           LATEST=$(app-store-connect get-latest-app-store-build-number "$APP_STORE_APPLE_ID" || echo "0")
           agvtool new-version -all $(($LATEST + 1))
-      - name: Build IPA
+      - name: Build ipa for distribution
         script: |
-          UUID=$(security cms -D -i /tmp/profile.mobileprovision | plutil -extract UUID raw -)
-          xcodebuild \
-            -workspace "$XCODE_WORKSPACE" \
-            -scheme "$XCODE_SCHEME" \
-            -configuration Release \
-            -archivePath /tmp/CMF2026.xcarchive \
-            CODE_SIGN_STYLE=Manual \
-            DEVELOPMENT_TEAM=75KLYBLNXP \
-            CODE_SIGN_IDENTITY="iPhone Distribution" \
-            PROVISIONING_PROFILE=$UUID \
-            PROVISIONING_PROFILE_SPECIFIER=$UUID \
-            archive
-          xcodebuild \
-            -exportArchive \
-            -archivePath /tmp/CMF2026.xcarchive \
-            -exportPath /tmp/CMF2026ipa \
-            -exportOptionsPlist /tmp/exportOptions.plist
+          xcode-project build-ipa \
+            --workspace "$XCODE_WORKSPACE" \
+            --scheme "$XCODE_SCHEME"
     artifacts:
-      - /tmp/CMF2026ipa/*.ipa
+      - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
     publishing:
       app_store_connect:
