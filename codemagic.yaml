@@ -22,9 +22,10 @@ workflows:
       - name: Set up code signing settings on Xcode project
         script: |
           xcode-project use-profiles
-      - name: Increment build number
+      - name: Increment build number and version
         script: |
           cd src/src
+          agvtool new-marketing-version 1.0.1
           LATEST=$(app-store-connect get-latest-app-store-build-number "$APP_STORE_APPLE_ID" || echo "0")
           agvtool new-version -all $(($LATEST + 1))
       - name: Build ipa for distribution
