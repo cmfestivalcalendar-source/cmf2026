@@ -19,6 +19,9 @@ workflows:
         script: |
           cd src/src
           pod install
+      - name: Set up code signing settings on Xcode project
+        script: |
+          xcode-project use-profiles
       - name: Increment build number
         script: |
           cd src/src
